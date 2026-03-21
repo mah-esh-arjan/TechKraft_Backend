@@ -1,0 +1,15 @@
+node_modules
+# Keep environment variables out of version control
+.env
+
+# Build outputs
+dist
+build
+
+# Prisma generated client
+/generated/prisma
+
+# Logs and OS files
+*.log
+.DS_Store
+.vscode/
