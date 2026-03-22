@@ -27,12 +27,14 @@ enum PropertyType {
 }
 
 model Property {
-  id     Int          @id @default(autoincrement())
-  price  Int
-  beds   Int
-  baths  Int
-  type   PropertyType
-  suburb String
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int
+  beds        Int
+  baths       Int
+  type        PropertyType
+  suburb      String
 
   metaData Json
   agentId  Int?
