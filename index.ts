@@ -3,10 +3,15 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from "pg";
 import dotenv from "dotenv";
+import cors from 'cors';
 
 dotenv.config();
 
+
+
 const app = express();
+app.use(cors())
+
 const port = process.env.PORT || 3000;
 
 const connectionString = `${process.env.DATABASE_URL}`;
@@ -68,6 +73,10 @@ app.get("/listing", async (req, res) => {
             if (maxPrice) filter.price.lte = parseInt(maxPrice as string);
         }
 
+        const total = await prisma.property.count({
+            where: filter
+        });
+
         const properties = await prisma.property.findMany({
             where: filter,
             skip: (page - 1) * limit,
@@ -75,9 +84,16 @@ app.get("/listing", async (req, res) => {
         });
 
         // 2. Control what to send based on the role
-        const responseData = isAdmin ? properties :
+        const items = isAdmin ? properties :
             properties.map(({ metaData, ...rest }) => rest);
-        res.send(responseData);
+
+        res.send({
+            items,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        });
 
     }
 
