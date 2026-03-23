@@ -27,6 +27,30 @@ app.get("/", (req, res) => {
 });
 
 
+
+app.post("/login", async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: "Email is required" });
+        }
+
+        const agent = await prisma.agent.findUnique({
+            where: { email }
+        });
+
+        if (agent) {
+            return res.status(200).json({ success: true,id: agent.id, message: "Login successful" });
+        } else {
+            return res.status(401).json({ success: false, message: "Invalid credentials" });
+        }
+    } catch (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 app.get("/listing", async (req, res) => {
     try {
 
