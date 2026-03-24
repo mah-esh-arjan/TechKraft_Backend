@@ -1,23 +1,10 @@
-import express from "express";
+import app from "./src/app";
 import dotenv from "dotenv";
-import cors from 'cors';
-import agentRoutes from './src/routes/agentRoutes';
-import propertyRoutes from './src/routes/propertyRoutes';
 import { prisma } from "./lib/prisma";
 
 dotenv.config();
 
-const app = express();
-app.use(cors());
-
 const port = process.env.PORT || 3000;
-
-// Middleware to parse JSON request bodies
-app.use(express.json());
-
-// Routes
-app.use("/", agentRoutes);
-app.use("/", propertyRoutes);
 
 async function main() {
     try {
@@ -37,4 +24,3 @@ async function main() {
 }
 
 main();
-

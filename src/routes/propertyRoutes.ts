@@ -3,7 +3,7 @@ import { getListings, getListingById } from "../controllers/propertyController";
 
 const router = Router();
 
-router.get("/listing", getListings);
-router.get("/listing/:id", getListingById);
+router.get("/listings", getListings);
+router.get("/listings/:id", getListingById);
 
 export default router;
