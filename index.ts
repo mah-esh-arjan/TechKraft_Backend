@@ -1,144 +1,23 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from "pg";
 import dotenv from "dotenv";
 import cors from 'cors';
+import agentRoutes from './src/routes/agentRoutes';
+import propertyRoutes from './src/routes/propertyRoutes';
+import { prisma } from "./lib/prisma";
 
 dotenv.config();
 
-
-
 const app = express();
-app.use(cors())
+app.use(cors());
 
 const port = process.env.PORT || 3000;
 
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool as any);
-const prisma = new PrismaClient({ adapter });
 // Middleware to parse JSON request bodies
 app.use(express.json());
 
-// Basic health check route
-app.get("/", (req, res) => {
-    res.send("TechKraft Backend API is running");
-});
-
-
-
-app.post("/login", async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ error: "Email is required" });
-        }
-
-        const agent = await prisma.agent.findUnique({
-            where: { email }
-        });
-
-        if (agent) {
-            return res.status(200).json({ success: true,id: agent.id, message: "Login successful" });
-        } else {
-            return res.status(401).json({ success: false, message: "Invalid credentials" });
-        }
-    } catch (err) {
-        console.error("Login error:", err);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-});
-
-app.get("/listing", async (req, res) => {
-    try {
-
-        const isAdmin = req.headers['x-admin'] === 'true';
-
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const search = req.query.search as string;
-
-        const beds = req.query.beds;
-        const baths = req.query.baths;
-        const type = req.query.type;
-        const minPrice = req.query.minPrice;
-        const maxPrice = req.query.maxPrice;
-
-
-        // Build a dynamic filter object
-        const filter: any = {};
-
-        if (search) {
-            filter.OR = [
-                { name: { contains: search, mode: "insensitive" } },
-                { description: { contains: search, mode: "insensitive" } },
-                { suburb: { contains: search, mode: "insensitive" } }
-            ]
-        }
-
-        if (beds) {
-            // Searches for properties with this many beds or more (gte = greater than or equal)
-            filter.beds = { gte: parseInt(beds as string) };
-        }
-
-        if (baths) {
-            filter.baths = { gte: parseInt(baths as string) };
-        }
-
-        if (type) {
-            filter.type = type;
-        }
-
-        if (minPrice || maxPrice) {
-            filter.price = {}; // Initialize the price filter object
-            if (minPrice) filter.price.gte = parseInt(minPrice as string);
-            if (maxPrice) filter.price.lte = parseInt(maxPrice as string);
-        }
-
-        const total = await prisma.property.count({
-            where: filter
-        });
-
-        const properties = await prisma.property.findMany({
-            where: filter,
-            skip: (page - 1) * limit,
-            take: limit
-        });
-
-        // 2. Control what to send based on the role
-        const items = isAdmin ? properties :
-            properties.map(({ metaData, ...rest }) => rest);
-
-        res.send({
-            items,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
-        });
-
-    }
-
-    catch (err) {
-        console.error("Error occured:", err)
-    }
-})
-
-app.get("/listing/:id", async (req, res) => {
-
-    try {
-
-        const property = await prisma.property.findUnique({ where: { id: parseInt(req.params.id) } })
-        res.send(property)
-    }
-
-    catch (err) {
-        console.error("Error occured:", err)
-    }
-
-})
+// Routes
+app.use("/", agentRoutes);
+app.use("/", propertyRoutes);
 
 async function main() {
     try {
@@ -157,6 +36,5 @@ async function main() {
     }
 }
 
-
-
 main();
+
