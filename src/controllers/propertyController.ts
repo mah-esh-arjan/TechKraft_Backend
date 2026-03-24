@@ -1,62 +1,67 @@
 import { Request, Response } from "express";
 import { getAllProperties, getPropertyById } from "../repositories/property.repo";
+import { PropertySearchDto, PropertyListResponseDto, PropertyResponseDto, PropertyAdminResponseDto } from "../dto/property.dto";
 
 export const getListings = async (req: Request, res: Response) => {
     try {
         const isAdmin = req.headers['x-admin'] === 'true';
 
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const search = req.query.search as string;
-
-        const beds = req.query.beds as string;
-        const baths = req.query.baths as string;
-        const type = req.query.type as string;
-        const minPrice = req.query.minPrice as string;
-        const maxPrice = req.query.maxPrice as string;
+        // Parse query params into DTO
+        const searchDto: PropertySearchDto = {
+            page: parseInt(req.query.page as string) || 1,
+            limit: parseInt(req.query.limit as string) || 10,
+            search: req.query.search as string,
+            beds: req.query.beds ? parseInt(req.query.beds as string) : undefined,
+            baths: req.query.baths ? parseInt(req.query.baths as string) : undefined,
+            type: req.query.type as any,
+            minPrice: req.query.minPrice ? parseInt(req.query.minPrice as string) : undefined,
+            maxPrice: req.query.maxPrice ? parseInt(req.query.maxPrice as string) : undefined,
+        };
 
         // Build a dynamic filter object
         const filter: any = {};
 
-        if (search) {
+        if (searchDto.search) {
             filter.OR = [
-                { name: { contains: search, mode: "insensitive" } },
-                { description: { contains: search, mode: "insensitive" } },
-                { suburb: { contains: search, mode: "insensitive" } }
+                { name: { contains: searchDto.search, mode: "insensitive" } },
+                { description: { contains: searchDto.search, mode: "insensitive" } },
+                { suburb: { contains: searchDto.search, mode: "insensitive" } }
             ]
         }
 
-        if (beds) {
-            filter.beds = { gte: parseInt(beds as string) };
+        if (searchDto.beds) {
+            filter.beds = { gte: searchDto.beds };
         }
 
-        if (baths) {
-            filter.baths = { gte: parseInt(baths as string) };
+        if (searchDto.baths) {
+            filter.baths = { gte: searchDto.baths };
         }
 
-        if (type) {
-            filter.type = type;
+        if (searchDto.type) {
+            filter.type = searchDto.type;
         }
 
-        if (minPrice || maxPrice) {
+        if (searchDto.minPrice || searchDto.maxPrice) {
             filter.price = {};
-            if (minPrice) filter.price.gte = parseInt(minPrice as string);
-            if (maxPrice) filter.price.lte = parseInt(maxPrice as string);
+            if (searchDto.minPrice) filter.price.gte = searchDto.minPrice;
+            if (searchDto.maxPrice) filter.price.lte = searchDto.maxPrice;
         }
 
-        const { items, total } = await getAllProperties(filter, page, limit);
+        const { items, total } = await getAllProperties(filter, searchDto.page!, searchDto.limit!);
 
         // Control what to send based on the role
         const finalItems = isAdmin ? items :
             items.map(({ metaData, ...rest }: any) => rest);
 
-        res.send({
+        const response: PropertyListResponseDto = {
             items: finalItems,
             total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit)
-        });
+            page: searchDto.page!,
+            limit: searchDto.limit!,
+            totalPages: Math.ceil(total / searchDto.limit!)
+        };
+
+        res.json(response);
 
     } catch (err: any) {
         console.error("Error occurred:", err);
